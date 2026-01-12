@@ -87,18 +87,84 @@ def extract_text(html, url=None):
 
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) < 2:
-        print('Usage: python extract.py <url>')
-        sys.exit(1)
-    url = sys.argv[1]
-    print('Fetching:', url)
+    import json
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='웹페이지 또는 HTML에서 제목과 본문을 추출합니다.',
+        prog='extract.py'
+    )
+    parser.add_argument(
+        'input',
+        nargs='?',
+        help='URL, 파일 경로, 또는 HTML 문자열 (기본값: 표준입력)'
+    )
+    parser.add_argument(
+        '--file', '-f',
+        action='store_true',
+        help='입력을 로컬 파일 경로로 해석'
+    )
+    parser.add_argument(
+        '--html',
+        action='store_true',
+        help='입력을 HTML 문자열로 해석'
+    )
+    parser.add_argument(
+        '--json', '-j',
+        action='store_true',
+        help='결과를 JSON 형식으로 출력'
+    )
+    
+    args = parser.parse_args()
+    
     try:
-        html = fetch_html(url)
-        title, text = extract_text(html, url=url)
-        print('\n=== TITLE ===\n')
-        print(title[:200])
-        print('\n=== EXTRACT (first 1000 chars) ===\n')
-        print(text[:1000])
-        print('\n\n[chars]', len(text))
+        # 입력 소스 결정
+        if args.file:
+            # 파일에서 읽기
+            if not args.input:
+                print('Error: --file 옵션 사용 시 파일 경로를 지정해야 합니다.', file=sys.stderr)
+                sys.exit(1)
+            with open(args.input, 'r', encoding='utf-8') as f:
+                html = f.read()
+            print(f'파일에서 읽음: {args.input}', file=sys.stderr)
+        elif args.html:
+            # HTML 문자열 직접 사용
+            if not args.input:
+                print('Error: --html 옵션 사용 시 HTML 문자열을 지정해야 합니다.', file=sys.stderr)
+                sys.exit(1)
+            html = args.input
+            print('HTML 문자열에서 처리', file=sys.stderr)
+        elif args.input:
+            # URL로 해석
+            url = args.input
+            print(f'URL에서 가져옴: {url}', file=sys.stderr)
+            html = fetch_html(url)
+        else:
+            # 표준입력에서 읽기
+            print('표준입력에서 읽음 (Ctrl+D로 종료)', file=sys.stderr)
+            html = sys.stdin.read()
+        
+        # 추출 실행
+        title, text = extract_text(html)
+        
+        # 출력
+        if args.json:
+            result = {
+                'title': title,
+                'text': text,
+                'char_count': len(text)
+            }
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print('\n=== TITLE ===\n')
+            print(title[:200] if title else '(제목 없음)')
+            print('\n=== EXTRACT (first 1000 chars) ===\n')
+            print(text[:1000])
+            print('\n\n[chars]', len(text))
+            
+    except FileNotFoundError as e:
+        print(f'Error: 파일을 찾을 수 없습니다 - {e}', file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        print('Error:', e)
+        print(f'Error: {e}', file=sys.stderr)
+        sys.exit(1)
