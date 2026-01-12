@@ -1,0 +1,6 @@
+/.venv/
+__pycache__/
+*.pyc
+.test_result.json
+.extract_samples.json
+/.pytest_cache/
