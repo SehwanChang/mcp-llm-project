@@ -1,0 +1,35 @@
+{
+  "title": "인공지능의 미래",
+  "text_length": 244,
+  "quiz_count": 4,
+  "quiz": [
+    {
+      "question": "인공지능은 세상을 바꾸는 것으로 확인됩니다.",
+      "answer": true,
+      "difficulty": 3,
+      "importance": "높음",
+      "explanation": "본문의 내용을 근거로 합니다."
+    },
+    {
+      "question": "AI는 의료에서 발전하고 있지 않습니다.",
+      "answer": false,
+      "difficulty": 2,
+      "importance": "중간",
+      "explanation": "본문의 내용을 근거로 합니다."
+    },
+    {
+      "question": "AI는 일자리를 감소시키는 직업이 아닙니다.",
+      "answer": true,
+      "difficulty": 3,
+      "importance": "높음",
+      "explanation": "본문의 내용을 근거로 합니다."
+    },
+    {
+      "question": "AI는 윤리적 문제를 가중합니다.",
+      "answer": false,
+      "difficulty": 1,
+      "importance": "낮음",
+      "explanation": "본문의 내용을 근거로 합니다."
+    }
+  ]
+}
