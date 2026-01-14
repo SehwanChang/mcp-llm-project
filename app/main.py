@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 import sys
 import requests
@@ -7,10 +8,17 @@ import re
 from extract import fetch_html, extract_text
 
 app = Flask(__name__)
+CORS(app)
 
 # Ollama API 설정
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama2')
+
+
+def has_cjk(text):
+    """한자, 히라가나, 가타카나 감지 (CJK 필터링)"""
+    cjk_pattern = r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]'
+    return bool(re.search(cjk_pattern, text))
 
 
 def summarize_with_ollama(text, max_tokens=100):
@@ -169,7 +177,8 @@ def extract_only():
         return jsonify({
             'url': url,
             'title': title,
-            'text': text
+            'text': text,
+            'text_length': len(text)
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

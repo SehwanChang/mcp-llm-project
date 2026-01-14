@@ -1,0 +1,225 @@
+import { useState } from 'react'
+import './App.css'
+
+function App() {
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState('extract')
+  const [showGuide, setShowGuide] = useState(!result)
+
+  const API_BASE = 'http://localhost:8000'
+
+  const handleProcess = async (endpoint) => {
+    if (!url.trim()) {
+      setError('URL을 입력해주세요')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    setShowGuide(false)
+
+    try {
+      const response = await fetch(`${API_BASE}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API 오류: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setResult(data)
+      setActiveTab(endpoint)
+    } catch (err) {
+      setError(err.message || '요청 실패')
+      setShowGuide(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const renderQuizResult = () => {
+    if (!result?.quiz || result.quiz.length === 0) {
+      return <p className="no-data">생성된 퀴즈가 없습니다</p>
+    }
+
+    return (
+      <div className="quiz-container">
+        {result.quiz.map((q, idx) => (
+          <div key={idx} className="quiz-card">
+            <div className="quiz-header">
+              <span className="quiz-num">문제 {idx + 1}</span>
+              <span className={`importance ${q.importance}`}>{q.importance}</span>
+              <span className="difficulty">난이도: {q.difficulty}</span>
+            </div>
+            <div className="quiz-question">{q.question}</div>
+            <div className="quiz-answer">
+              정답: <strong>{q.answer ? '⭕ O' : '❌ X'}</strong>
+            </div>
+            <div className="quiz-explanation">{q.explanation}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const renderGuide = () => {
+    return (
+      <div className="guide-section">
+        <div className="guide-content">
+          <h2>📖 사용 방법</h2>
+          
+          <div className="guide-steps">
+            <div className="guide-step">
+              <span className="step-badge">1️⃣</span>
+              <div>
+                <strong>URL 입력</strong>
+                <p>https://로 시작하는 웹페이지 주소 입력</p>
+              </div>
+            </div>
+            <div className="guide-step">
+              <span className="step-badge">2️⃣</span>
+              <div>
+                <strong>[추출] 버튼</strong>
+                <p>웹사이트의 본문 텍스트 자동 추출</p>
+              </div>
+            </div>
+            <div className="guide-step">
+              <span className="step-badge">3️⃣</span>
+              <div>
+                <strong>[요약] 버튼</strong>
+                <p>AI가 내용을 한국어 2-3문장으로 요약</p>
+              </div>
+            </div>
+            <div className="guide-step">
+              <span className="step-badge">4️⃣</span>
+              <div>
+                <strong>[퀴즈] 버튼</strong>
+                <p>O/X 퀴즈 4-5개 자동 생성 (난이도/중요도 표시)</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="guide-tips">
+            <p>💡 Enter 키로 자동 실행 | 퀴즈는 여러 번 클릭해서 다양한 문제 생성 가능</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container">
+      <header className="header">
+        <h1>🎓 스마트 학습 도구</h1>
+        <p>웹 기사 → 자동 요약 & 퀴즈 생성</p>
+      </header>
+
+      <section className="input-section">
+        <div className="input-group">
+          <input
+            type="url"
+            placeholder="https://example.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleProcess('extract')}
+            disabled={loading}
+          />
+          <div className="button-group">
+            <button 
+              onClick={() => handleProcess('extract')} 
+              disabled={loading}
+              className="btn btn-primary"
+            >
+              {loading ? '처리중...' : '추출'}
+            </button>
+            <button 
+              onClick={() => handleProcess('process')} 
+              disabled={loading}
+              className="btn btn-secondary"
+            >
+              {loading ? '처리중...' : '요약'}
+            </button>
+            <button 
+              onClick={() => handleProcess('quiz')} 
+              disabled={loading}
+              className="btn btn-accent"
+            >
+              {loading ? '처리중...' : '퀴즈'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {error && <div className="error-message">⚠️ {error}</div>}
+
+      {result ? (
+        <section className="result-section">
+          <div className="result-header">
+            <h2>{result.title || '제목 없음'}</h2>
+            <span className="text-length">본문: {result.text_length || 0}자</span>
+          </div>
+
+          <div className="tabs">
+            {result.text && (
+              <button
+                className={`tab ${activeTab === 'extract' ? 'active' : ''}`}
+                onClick={() => setActiveTab('extract')}
+              >
+                본문
+              </button>
+            )}
+            {result.summary && (
+              <button
+                className={`tab ${activeTab === 'process' ? 'active' : ''}`}
+                onClick={() => setActiveTab('process')}
+              >
+                요약
+              </button>
+            )}
+            {result.quiz && (
+              <button
+                className={`tab ${activeTab === 'quiz' ? 'active' : ''}`}
+                onClick={() => setActiveTab('quiz')}
+              >
+                퀴즈 ({result.quiz_count || result.quiz.length})
+              </button>
+            )}
+          </div>
+
+          <div className="tab-content">
+            {activeTab === 'extract' && result.text && (
+              <div className="text-content">
+                <p>{result.text}</p>
+              </div>
+            )}
+            {activeTab === 'process' && result.summary && (
+              <div className="summary-content">
+                <div className="summary-box">
+                  {result.summary}
+                </div>
+              </div>
+            )}
+            {activeTab === 'quiz' && renderQuizResult()}
+          </div>
+        </section>
+      ) : (
+        showGuide && renderGuide()
+      )}
+
+      <footer className="footer">
+        <p>Flask API 서버: {API_BASE}</p>
+      </footer>
+    </div>
+  )
+}
+
+export default App
