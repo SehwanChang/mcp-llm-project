@@ -15,21 +15,45 @@ OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5')
 
 
-def has_cjk(text):
-    """한자, 히라가나, 가타카나 감지 (CJK 필터링)"""
-    cjk_pattern = r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]'
-    return bool(re.search(cjk_pattern, text))
+def has_chinese_or_japanese(text):
+    """중국어(한자) 또는 일본어(히라가나, 가타카나) 감지"""
+    # 한자 (중국어)
+    chinese_pattern = r'[\u4E00-\u9FFF]'
+    # 히라가나, 가타카나 (일본어)
+    japanese_pattern = r'[\u3040-\u309F\u30A0-\u30FF]'
+    
+    has_chinese = bool(re.search(chinese_pattern, text))
+    has_japanese = bool(re.search(japanese_pattern, text))
+    
+    return has_chinese or has_japanese
+
+
+def is_korean_text(text):
+    """텍스트가 주로 한국어인지 확인 (한글 비율 체크)"""
+    if not text:
+        return False
+    korean_chars = len(re.findall(r'[가-힣]', text))
+    total_chars = len(re.findall(r'[가-힣a-zA-Z0-9]', text))
+    if total_chars == 0:
+        return False
+    return (korean_chars / total_chars) > 0.3  # 한글이 30% 이상이면 OK
 
 
 def summarize_with_ollama(text, max_tokens=100):
     """Ollama를 사용하여 텍스트를 요약합니다."""
     try:
-        prompt = f"""다음 텍스트를 반드시 한국어로만 요약하세요. 
-절대로 영어나 다른 언어를 사용하지 마세요.
-2-3개의 완전한 한국어 문장으로 핵심 내용을 요약하세요.
+        prompt = f"""[중요] 반드시 한국어로만 작성하세요. 중국어, 일본어, 영어 사용 금지!
 
-텍스트:
-{text[:500]}
+다음 글의 핵심 내용을 한국어로 요약해주세요.
+
+글:
+{text[:800]}
+
+규칙:
+- 반드시 한국어로만 작성 (한글만 사용)
+- 중국어(汉字), 일본어, 영어 절대 사용 금지
+- 3-4문장으로 핵심 내용 정리
+- 주요 개념과 결론 포함
 
 한국어 요약:"""
         
@@ -52,22 +76,22 @@ def summarize_with_ollama(text, max_tokens=100):
 def generate_quiz_with_ollama(text):
     """Ollama를 사용하여 O/X 퀴즈 5개를 생성합니다."""
     try:
-        prompt = f"""다음 글을 읽고 O/X 퀴즈 5개를 만들어주세요.
+        prompt = f"""[필수 규칙]
+1. 반드시 한국어로만 작성 (중국어, 일본어, 영어 금지)
+2. 반드시 아래 글에 나온 내용만 사용 (글에 없는 내용 절대 금지)
+3. 추측하거나 지어내지 말 것
 
 글:
-{text[:800]}
+{text[:1000]}
 
-규칙:
-- 반드시 한국어로 작성
-- O(맞음) 또는 X(틀림)로 답할 수 있는 문장
-- 각 문장에 대한 간단한 해설도 함께 작성
+위 글의 내용만을 바탕으로 O/X 퀴즈 5개를 만드세요.
 
-다음 형식으로 정확히 5개 작성:
-1. 문장내용 | O | 해설내용
-2. 문장내용 | X | 해설내용
-3. 문장내용 | O | 해설내용
-4. 문장내용 | X | 해설내용
-5. 문장내용 | O | 해설내용
+형식:
+1. [글에서 언급된 사실을 바탕으로 한 문장] | O | [글의 어느 부분에서 확인할 수 있는지]
+2. [글의 내용을 살짝 틀리게 바꾼 문장] | X | [왜 틀린지, 글에서 실제로 뭐라고 했는지]
+3. [글에서 언급된 사실을 바탕으로 한 문장] | O | [근거]
+4. [글의 내용을 살짝 틀리게 바꾼 문장] | X | [왜 틀린지]
+5. [글에서 언급된 사실을 바탕으로 한 문장] | O | [근거]
 
 퀴즈:"""
         
@@ -119,6 +143,11 @@ def generate_quiz_with_ollama(text):
                 
                 # 플레이스홀더 필터링
                 if '문장내용' in question_part or '해설내용' in explanation_part:
+                    continue
+                
+                # 중국어/일본어 포함 시 필터링
+                if has_chinese_or_japanese(question_part) or has_chinese_or_japanese(explanation_part):
+                    print(f'Filtered out non-Korean quiz: {question_part[:30]}...')
                     continue
                 
                 if len(question_part) > 5:

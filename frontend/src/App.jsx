@@ -164,18 +164,30 @@ function App() {
               disabled={loading}
               className="btn btn-secondary"
             >
-              {loading ? '처리중...' : '요약'}
+              요약
             </button>
             <button 
               onClick={() => handleProcess('quiz')} 
               disabled={loading}
               className="btn btn-accent"
             >
-              {loading ? '처리중...' : '퀴즈'}
+              퀴즈
             </button>
           </div>
         </div>
       </section>
+
+      {loading && (
+        <div className="loading-section">
+          <div className="loading-spinner"></div>
+          <div className="loading-text">
+            <p className="loading-main">AI가 열심히 분석 중입니다...</p>
+            <p className="loading-sub">
+              {activeTab === 'quiz' ? '퀴즈를 생성하고 있어요 (약 10-15초)' : '내용을 요약하고 있어요 (약 5-10초)'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && <div className="error-message">⚠️ {error}</div>}
 
