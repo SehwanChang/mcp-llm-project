@@ -287,6 +287,18 @@ body {
   font-size: 0.95rem;
 }
 
+.importance-badge {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.importance-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
 .importance {
   display: inline-block;
   padding: 0.25rem 0.75rem;
@@ -342,6 +354,41 @@ body {
 .quiz-answer strong {
   font-size: 1.1rem;
   color: var(--gray-900);
+}
+
+.quiz-answer.revealed {
+  background: #f0fdf4;
+  border: 2px solid var(--secondary);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.quiz-answer.revealed strong {
+  font-size: 1.3rem;
+}
+
+.btn-reveal-answer {
+  background: var(--primary);
+  color: white;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.btn-reveal-answer:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-reveal-answer:active {
+  transform: translateY(0);
 }
 
 .quiz-explanation {

@@ -6,8 +6,9 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState('extract')
+  const [activeTab, setActiveTab] = useState('process')
   const [showGuide, setShowGuide] = useState(!result)
+  const [revealedAnswers, setRevealedAnswers] = useState({})
 
   const API_BASE = 'http://localhost:8000'
 
@@ -21,6 +22,7 @@ function App() {
     setError(null)
     setResult(null)
     setShowGuide(false)
+    setRevealedAnswers({})
 
     try {
       const response = await fetch(`${API_BASE}/${endpoint}`, {
@@ -46,6 +48,13 @@ function App() {
     }
   }
 
+  const toggleAnswer = (idx) => {
+    setRevealedAnswers(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }))
+  }
+
   const renderQuizResult = () => {
     if (!result?.quiz || result.quiz.length === 0) {
       return <p className="no-data">생성된 퀴즈가 없습니다</p>
@@ -57,13 +66,27 @@ function App() {
           <div key={idx} className="quiz-card">
             <div className="quiz-header">
               <span className="quiz-num">문제 {idx + 1}</span>
-              <span className={`importance ${q.importance}`}>{q.importance}</span>
+              <span className="importance-badge">
+                <span className="importance-label">중요도:</span>
+                <span className={`importance ${q.importance}`}>{q.importance}</span>
+              </span>
               <span className="difficulty">난이도: {q.difficulty}</span>
             </div>
             <div className="quiz-question">{q.question}</div>
-            <div className="quiz-answer">
-              정답: <strong>{q.answer ? '⭕ O' : '❌ X'}</strong>
-            </div>
+            
+            {revealedAnswers[idx] ? (
+              <div className="quiz-answer revealed">
+                <strong>{q.answer ? '⭕ O' : '❌ X'}</strong>
+              </div>
+            ) : (
+              <button 
+                className="btn-reveal-answer"
+                onClick={() => toggleAnswer(idx)}
+              >
+                정답 보기
+              </button>
+            )}
+            
             <div className="quiz-explanation">{q.explanation}</div>
           </div>
         ))}
@@ -130,17 +153,10 @@ function App() {
             placeholder="https://example.com"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleProcess('extract')}
+            onKeyPress={(e) => e.key === 'Enter' && handleProcess('process')}
             disabled={loading}
           />
           <div className="button-group">
-            <button 
-              onClick={() => handleProcess('extract')} 
-              disabled={loading}
-              className="btn btn-primary"
-            >
-              {loading ? '처리중...' : '추출'}
-            </button>
             <button 
               onClick={() => handleProcess('process')} 
               disabled={loading}
@@ -169,14 +185,6 @@ function App() {
           </div>
 
           <div className="tabs">
-            {result.text && (
-              <button
-                className={`tab ${activeTab === 'extract' ? 'active' : ''}`}
-                onClick={() => setActiveTab('extract')}
-              >
-                본문
-              </button>
-            )}
             {result.summary && (
               <button
                 className={`tab ${activeTab === 'process' ? 'active' : ''}`}
@@ -196,11 +204,6 @@ function App() {
           </div>
 
           <div className="tab-content">
-            {activeTab === 'extract' && result.text && (
-              <div className="text-content">
-                <p>{result.text}</p>
-              </div>
-            )}
             {activeTab === 'process' && result.summary && (
               <div className="summary-content">
                 <div className="summary-box">

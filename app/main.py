@@ -161,29 +161,6 @@ def process():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/extract', methods=['POST'])
-def extract_only():
-    """URL의 본문만 추출 (요약 없음)"""
-    try:
-        data = request.json or {}
-        url = data.get('url')
-        
-        if not url:
-            return jsonify({'error': 'url required'}), 400
-        
-        html = fetch_html(url)
-        title, text = extract_text(html, url=url)
-        
-        return jsonify({
-            'url': url,
-            'title': title,
-            'text': text,
-            'text_length': len(text)
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 @app.route('/quiz', methods=['POST'])
 def quiz():
     """URL의 본문을 추출하고 퀴즈를 생성합니다."""
