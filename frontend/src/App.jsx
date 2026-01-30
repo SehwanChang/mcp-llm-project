@@ -10,7 +10,9 @@ function App() {
   const [showGuide, setShowGuide] = useState(!result)
   const [revealedAnswers, setRevealedAnswers] = useState({})
 
-  const API_BASE = 'http://localhost:8000'
+  // 환경에 따라 API URL 자동 설정
+  // 개발: localhost:8000, 배포: /api (nginx 프록시)
+  const API_BASE = import.meta.env.PROD ? '/api' : 'http://localhost:8000'
 
   const handleReset = () => {
     setUrl('')

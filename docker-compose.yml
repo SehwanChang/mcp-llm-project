@@ -1,25 +1,23 @@
 version: '3.8'
+
 services:
+  # Flask 백엔드 (Chrome + Selenium 포함)
   app:
     build: ./app
     container_name: mcp_llm_app
-    volumes:
-      - ./app:/app
     environment:
-      - OLLAMA_HOST=host.docker.internal:11434
-      - MCP_HOST=mcp
-      - MCP_PORT=3000
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen2.5
     ports:
       - "8000:8000"
-    depends_on:
-      - mcp
+    restart: unless-stopped
 
-  mcp:
-    build: ./mcp_server
-    container_name: mcp_filesystem
-    volumes:
-      - ./mcp_server/data:/data
+  # React 프론트엔드 (Nginx)
+  frontend:
+    build: ./frontend
+    container_name: mcp_llm_frontend
     ports:
-      - "3000:3000"
-    environment:
-      - DATA_DIR=/data
+      - "80:80"
+    depends_on:
+      - app
+    restart: unless-stopped
