@@ -12,6 +12,15 @@ function App() {
 
   const API_BASE = 'http://localhost:8000'
 
+  const handleReset = () => {
+    setUrl('')
+    setResult(null)
+    setError(null)
+    setShowGuide(true)
+    setRevealedAnswers({})
+    setActiveTab('process')
+  }
+
   const handleProcess = async (endpoint) => {
     if (!url.trim()) {
       setError('URL을 입력해주세요')
@@ -76,7 +85,7 @@ function App() {
             
             {revealedAnswers[idx] ? (
               <div className="quiz-answer revealed">
-                <strong>{q.answer ? '⭕ O' : '❌ X'}</strong>
+                <strong>{q.answer ? 'O' : 'X'}</strong>
               </div>
             ) : (
               <button 
@@ -111,19 +120,12 @@ function App() {
             <div className="guide-step">
               <span className="step-badge">2️⃣</span>
               <div>
-                <strong>[추출] 버튼</strong>
-                <p>웹사이트의 본문 텍스트 자동 추출</p>
-              </div>
-            </div>
-            <div className="guide-step">
-              <span className="step-badge">3️⃣</span>
-              <div>
                 <strong>[요약] 버튼</strong>
                 <p>AI가 내용을 한국어 2-3문장으로 요약</p>
               </div>
             </div>
             <div className="guide-step">
-              <span className="step-badge">4️⃣</span>
+              <span className="step-badge">3️⃣</span>
               <div>
                 <strong>[퀴즈] 버튼</strong>
                 <p>O/X 퀴즈 4-5개 자동 생성 (난이도/중요도 표시)</p>
@@ -142,7 +144,7 @@ function App() {
   return (
     <div className="container">
       <header className="header">
-        <h1>🎓 스마트 학습 도구</h1>
+        <h1 onClick={handleReset} style={{ cursor: 'pointer' }}>🎓 스마트 학습 도구</h1>
         <p>웹 기사 → 자동 요약 & 퀴즈 생성</p>
       </header>
 
