@@ -68,8 +68,18 @@ def fetch_html_with_selenium(url, timeout=15):
 def fetch_html(url, timeout=10):
     """URL에서 HTML 가져오기 (필요시 Selenium 사용)"""
     if needs_js_rendering(url):
-        print(f'Using Selenium for JS rendering: {url}')
-        return fetch_html_with_selenium(url, timeout)
+        print(f'JS rendering site detected: {url}')
+        try:
+            # Selenium으로 시도
+            print(f'Trying Selenium for JS rendering...')
+            return fetch_html_with_selenium(url, timeout)
+        except Exception as e:
+            # Selenium 실패 시 일반 requests로 fallback
+            print(f'Selenium failed ({e}), falling back to requests...')
+            resp = requests.get(url, headers=HEADERS, timeout=timeout)
+            resp.raise_for_status()
+            resp.encoding = resp.apparent_encoding
+            return resp.text
     else:
         print(f'Using requests for static HTML: {url}')
         resp = requests.get(url, headers=HEADERS, timeout=timeout)

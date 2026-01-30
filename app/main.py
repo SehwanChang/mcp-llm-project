@@ -12,7 +12,7 @@ CORS(app)
 
 # Ollama API 설정
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama2')
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5')
 
 
 def has_cjk(text):
@@ -50,34 +50,26 @@ def summarize_with_ollama(text, max_tokens=100):
 
 
 def generate_quiz_with_ollama(text):
-    """Ollama를 사용하여 O/X 퀴즈 5개를 생성합니다. (Stage 1 MVP)"""
+    """Ollama를 사용하여 O/X 퀴즈 5개를 생성합니다."""
     try:
-        prompt = f"""다음 글을 읽고 O/X 퀴즈 5개를 만드세요.
+        prompt = f"""다음 글을 읽고 O/X 퀴즈 5개를 만들어주세요.
 
-텍스트:
-{text[:400]}
+글:
+{text[:800]}
 
-중요한 규칙:
-1. 한국어로만 작성하세요 (한자, 외래어 금지)
-2. 자연스러운 평서문으로 작성하세요
-3. "~이다", "~한다", "~있다" 형태로 끝나야 합니다
-4. 질문 형태(~인가?, ~할까?) 절대 금지
+규칙:
+- 반드시 한국어로 작성
+- O(맞음) 또는 X(틀림)로 답할 수 있는 문장
+- 각 문장에 대한 간단한 해설도 함께 작성
 
-좋은 예시:
-- "인공지능은 의료 분야에서 활용되고 있다"
-- "딥러닝은 머신러닝의 한 종류이다"
-- "파이썬은 프로그래밍 언어이다"
+다음 형식으로 정확히 5개 작성:
+1. 문장내용 | O | 해설내용
+2. 문장내용 | X | 해설내용
+3. 문장내용 | O | 해설내용
+4. 문장내용 | X | 해설내용
+5. 문장내용 | O | 해설내용
 
-나쁜 예시:
-- "인공지능은 의료에서 사용되는가?" (질문형)
-- "AI는 醫療分野에서 활용된다" (한자 포함)
-
-정확히 이 형식으로 작성:
-1. [높음] 자연스러운 평서문 질문 | true
-2. [중간] 자연스러운 평서문 질문 | false
-3. [높음] 자연스러운 평서문 질문 | true
-4. [낮음] 자연스러운 평서문 질문 | false
-5. [중간] 자연스러운 평서문 질문 | true"""
+퀴즈:"""
         
         response = requests.post(
             f'{OLLAMA_HOST}/api/generate',
@@ -92,44 +84,53 @@ def generate_quiz_with_ollama(text):
         result = response.json()
         response_text = result.get('response', '').strip()
         
-        # 응답 파싱 - 줄 바꿈 정규화
-        quiz_list = []
-        normalized = ' '.join(response_text.split())
-        # 패턴: "N. [importance] question | answer"
-        pattern = r'(\d+)\.\s+\[([^\]]+)\]\s+([^|]+)\|\s*(true|false)'
-        matches = re.findall(pattern, normalized, re.IGNORECASE)
+        # 디버그: Ollama 응답 출력
+        print(f'Ollama quiz response: {response_text[:500]}...')
         
-        for match in matches:
+        # 응답 파싱 - 해설 포함 패턴
+        quiz_list = []
+        
+        # 패턴: "N. 문장 | O/X | 해설" 또는 "N. 문장 | O/X"
+        pattern_with_explanation = r'(\d+)\.\s*([^|]+)\|\s*(O|X|true|false)\s*\|\s*([^\n]+)'
+        pattern_without = r'(\d+)\.\s*([^|]+)\|\s*(O|X|true|false)'
+        
+        matches = re.findall(pattern_with_explanation, response_text, re.IGNORECASE)
+        has_explanation = True
+        
+        if not matches:
+            matches = re.findall(pattern_without, response_text, re.IGNORECASE)
+            has_explanation = False
+        
+        print(f'Parsed {len(matches)} quiz items (with explanation: {has_explanation})')
+        
+        difficulties = ['높음', '중간', '낮음', '중간', '높음']
+        
+        for i, match in enumerate(matches[:5]):
             try:
-                if len(match) == 5:
-                    num, importance_part, question_part, answer_part, explanation_part = match
+                if has_explanation:
+                    num, question_part, answer_part, explanation_part = match
                 else:
-                    num, importance_part, question_part, answer_part = match[:4]
-                    explanation_part = ''
+                    num, question_part, answer_part = match
+                    explanation_part = '본문의 내용을 참고하세요.'
                 
                 question_part = question_part.strip()
-                answer_part = answer_part.lower()
+                answer_part = answer_part.upper().strip()
+                explanation_part = explanation_part.strip()
                 
-                # 한자/외래어 필터링
-                if has_cjk(question_part):
+                # 플레이스홀더 필터링
+                if '문장내용' in question_part or '해설내용' in explanation_part:
                     continue
                 
-                # 앞의 "질문1:", "질문2:" 같은 번호 제거
-                question_part = question_part.lstrip('0123456789').lstrip(':. ').strip()
-                
-                if len(question_part) > 3:
-                    difficulty = 1 if importance_part in ['낮음', 'low'] else (2 if importance_part in ['중간', 'medium'] else 3)
-                    importance = importance_part if importance_part in ['높음', '중간', '낮음'] else 'high'
-                    
-                    answer_bool = answer_part in ['true']
-                    explanation = explanation_part.strip() if explanation_part else '본문의 내용을 근거로 합니다.'
+                if len(question_part) > 5:
+                    # O, TRUE = 정답, X, FALSE = 오답
+                    is_true = answer_part in ['O', 'TRUE']
                     
                     quiz = {
                         'question': question_part,
-                        'answer': answer_bool,
-                        'difficulty': difficulty,
-                        'importance': importance,
-                        'explanation': explanation
+                        'answer': is_true,
+                        'difficulty': (i % 3) + 1,
+                        'importance': difficulties[i] if i < len(difficulties) else '중간',
+                        'explanation': explanation_part
                     }
                     quiz_list.append(quiz)
             except Exception:
