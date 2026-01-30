@@ -159,13 +159,16 @@ def process():
         # 1. HTML 가져오기
         print(f'Fetching: {url}')
         html = fetch_html(url)
+        print(f'HTML length: {len(html)}')
         
         # 2. 본문 추출
         title, text = extract_text(html, url=url)
+        print(f'Extracted - Title: {title}, Text length: {len(text)}')
         
         # 3. Ollama로 요약
         print('Summarizing with Ollama...')
         summary = summarize_with_ollama(text)
+        print(f'Summary: {summary[:100]}...')
         
         return jsonify({
             'url': url,

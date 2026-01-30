@@ -1,17 +1,81 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 HEADERS = {
     'User-Agent': 'mcp-llm-crawler/1.0 (+https://example.com)'
 }
 
+# JavaScript 렌더링이 필요한 사이트 패턴
+JS_REQUIRED_DOMAINS = [
+    'velog.io',
+    'tistory.com',
+    'medium.com',
+    'brunch.co.kr',
+    'notion.site'
+]
+
+
+def needs_js_rendering(url):
+    """URL이 JavaScript 렌더링이 필요한 사이트인지 확인"""
+    return any(domain in url for domain in JS_REQUIRED_DOMAINS)
+
+
+def fetch_html_with_selenium(url, timeout=15):
+    """Selenium을 사용하여 JavaScript 렌더링된 HTML 가져오기"""
+    options = Options()
+    options.add_argument('--headless')  # 브라우저 창 안 띄움
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--disable-gpu')
+    options.add_argument(f'user-agent={HEADERS["User-Agent"]}')
+    
+    driver = None
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.set_page_load_timeout(timeout)
+        
+        driver.get(url)
+        
+        # JavaScript 실행 대기 (페이지 로딩)
+        time.sleep(3)
+        
+        # article, main 또는 본문 요소가 나타날 때까지 대기
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, "article"))
+            )
+        except:
+            # article이 없어도 계속 진행
+            pass
+        
+        html = driver.page_source
+        return html
+    finally:
+        if driver:
+            driver.quit()
+
 
 def fetch_html(url, timeout=10):
-    resp = requests.get(url, headers=HEADERS, timeout=timeout)
-    resp.raise_for_status()
-    resp.encoding = resp.apparent_encoding
-    return resp.text
+    """URL에서 HTML 가져오기 (필요시 Selenium 사용)"""
+    if needs_js_rendering(url):
+        print(f'Using Selenium for JS rendering: {url}')
+        return fetch_html_with_selenium(url, timeout)
+    else:
+        print(f'Using requests for static HTML: {url}')
+        resp = requests.get(url, headers=HEADERS, timeout=timeout)
+        resp.raise_for_status()
+        resp.encoding = resp.apparent_encoding
+        return resp.text
 
 
 def _clean_soup(soup):
